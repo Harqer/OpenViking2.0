@@ -415,9 +415,20 @@ class SkillProcessor:
             normalized["allowed_tools"] = SkillProcessor._normalize_list_field(allowed_tools)
         normalized.pop("allowed-tools", None)
 
-        tags = normalized.get("tags")
-        if tags is not None:
-            normalized["tags"] = SkillProcessor._normalize_list_field(tags)
+        for field in ("tags", "domains", "intents", "aliases"):
+            value = normalized.get(field)
+            if value is not None:
+                normalized[field] = SkillProcessor._normalize_list_field(value)
+
+        relations = normalized.get("relations")
+        if relations is not None:
+            if not isinstance(relations, dict):
+                raise ValueError("Skill 'relations' must be a mapping of relation names to targets")
+            normalized["relations"] = {
+                str(relation): SkillProcessor._normalize_list_field(targets)
+                for relation, targets in relations.items()
+                if targets is not None
+            }
 
         return normalized
 
@@ -461,6 +472,16 @@ class SkillProcessor:
             "description": skill_dict.get("description", ""),
         }
 
+        for field in ("principle", "family"):
+            value = skill_dict.get(field)
+            if value:
+                abstract_meta[field] = value
+
+        for field in ("domains", "intents", "aliases"):
+            value = skill_dict.get(field)
+            if value:
+                abstract_meta[field] = value
+
         tags = skill_dict.get("tags")
         if tags:
             abstract_meta["tags"] = tags
@@ -468,6 +489,10 @@ class SkillProcessor:
         allowed_tools = skill_dict.get("allowed_tools") or skill_dict.get("allowed-tools")
         if allowed_tools:
             abstract_meta["allowed_tools"] = allowed_tools
+
+        relations = skill_dict.get("relations")
+        if relations:
+            abstract_meta["relations"] = relations
 
         return yaml.safe_dump(abstract_meta, allow_unicode=True, sort_keys=False).strip()
 
@@ -548,7 +573,12 @@ class SkillProcessor:
         )
 
     async def _generate_overview(self, skill_dict: Dict[str, Any], config) -> str:
-        """Generate L1 overview using VLM."""
+        """Generate L1 overview, falling back to authoritative skill content without a VLM."""
+        vlm = getattr(config, "vlm", None)
+        is_available = getattr(vlm, "is_available", None)
+        if vlm is None or not callable(is_available) or not is_available():
+            return str(skill_dict.get("content", "") or "")
+
         from openviking.prompts import render_prompt
 
         prompt = render_prompt(
