@@ -235,6 +235,12 @@ def _skill_summary_from_meta(name: str, root_uri: str, meta: Dict[str, Any]) -> 
         "root_uri": root_uri,
         "skill_md_uri": _skill_md_uri(root_uri),
         "description": meta.get("description", ""),
+        "principle": meta.get("principle", ""),
+        "family": meta.get("family", ""),
+        "domains": meta.get("domains") or [],
+        "intents": meta.get("intents") or [],
+        "aliases": meta.get("aliases") or [],
+        "relations": meta.get("relations") or {},
         "tags": meta.get("tags") or [],
         "allowed_tools": meta.get("allowed_tools") or meta.get("allowed-tools") or [],
     }
