@@ -9,6 +9,11 @@ from typing import Any, Dict, Optional, Tuple
 import yaml
 
 
+_ROUTING_SCALAR_FIELDS = ("principle", "family")
+_ROUTING_LIST_FIELDS = ("domains", "intents", "aliases")
+_ROUTING_MAPPING_FIELDS = ("relations",)
+
+
 class SkillLoader:
     """Load and parse SKILL.md files."""
 
@@ -92,6 +97,9 @@ class SkillLoader:
             "allowed_tools_declared": allowed_tools_declared,
             "tags": meta.get("tags", []),
         }
+        for field in _ROUTING_SCALAR_FIELDS + _ROUTING_LIST_FIELDS + _ROUTING_MAPPING_FIELDS:
+            if field in meta:
+                skill[field] = meta[field]
         if "metadata" in meta:
             skill["metadata"] = meta["metadata"]
         return skill
@@ -124,6 +132,10 @@ class SkillLoader:
         tags = skill_dict.get("tags") or []
         if tags:
             frontmatter["tags"] = tags
+        for field in _ROUTING_SCALAR_FIELDS + _ROUTING_LIST_FIELDS + _ROUTING_MAPPING_FIELDS:
+            value = skill_dict.get(field)
+            if value not in (None, "", [], {}):
+                frontmatter[field] = value
         if "metadata" in skill_dict:
             frontmatter["metadata"] = skill_dict["metadata"]
 
@@ -259,6 +271,12 @@ def validate_skill_format(
         "description": description or "",
         "tags": parsed.get("tags") or [],
         "allowed_tools": parsed.get("allowed_tools") or [],
+        "principle": parsed.get("principle") or "",
+        "family": parsed.get("family") or "",
+        "domains": parsed.get("domains") or [],
+        "intents": parsed.get("intents") or [],
+        "aliases": parsed.get("aliases") or [],
+        "relations": parsed.get("relations") or {},
         "body_lines": body_lines,
         "source_path": source_path or "",
         "skill_dir_name": skill_dir_name or "",
